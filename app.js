@@ -23,27 +23,34 @@ class App {
 
   browseAndFiltedData(datas = [], filter, loop = DEFAULT_LOOP) {
     loop.shift();
-    const index = loop[0] || null;
+    const index = loop[0];
     if (index) {
-      datas.map((data) => {
-        data[index] = this.browseAndFiltedData(data[index], filter, [...loop]);
-        return data[index].length > 0 ? data : {};
-      });
-      return datas.filter((data) => data[index].length > 0);
-    } else {
-      return datas.filter((data) => data.name.includes(filter));
+      return datas
+        .map((data) => {
+          return data[index].length > 0
+            ? Object.assign({}, data, {
+                [index]: this.browseAndFiltedData(data[index], filter, [...loop]),
+              })
+            : null;
+        })
+        .filter((data) => data[index].length > 0);
     }
+    return datas.filter((data) => data.name.includes(filter));
   }
 
   countChild(data) {
-    Object.keys(data).forEach((key) => {
-      if (data[key] instanceof Array) {
-        data.name += ` [${data[key].length}]`;
-        data[key].map((child) => this.countChild(child));
-      }
-    });
+    const childrenKey = Object.keys(data).find((key) => data[key] instanceof Array);
 
-    return data;
+    return childrenKey
+      ? Object.assign({}, data, {
+          name: `${data.name} [${data[childrenKey].length}]`,
+          [childrenKey]: this.addChildrenLength(data[childrenKey]),
+        })
+      : Object.assign({}, data);
+  }
+
+  addChildrenLength(data) {
+    return data.map((d) => this.countChild(d));
   }
 
   cli(args) {
@@ -51,7 +58,7 @@ class App {
     let filteredData = this.browseAndFiltedData(data, options.filter);
 
     if (options.count) {
-      filteredData.map((data) => this.countChild(data));
+      filteredData = this.addChildrenLength(filteredData);
     }
 
     // util.inspect used to display full object in console
