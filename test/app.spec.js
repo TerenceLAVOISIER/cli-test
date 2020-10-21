@@ -111,17 +111,77 @@ describe("App", function () {
     });
   });
 
-  context("BrowseAndFiltedData", () => {
+  context("GetChildrenKey", () => {
+    it("should return children key", () => {
+      // Given
+      const data = { name: "first", arr: [] };
+
+      // When
+      const result = app.getChildrenKey(data);
+
+      // Then
+      expect(result).to.equal("arr");
+    });
+
+    it("should not return children", () => {
+      // Given
+      const data = { name: "first" };
+
+      // When
+      const result = app.getChildrenKey(data);
+
+      // Then
+      expect(result).to.equal(undefined);
+    });
+  });
+
+  context("findAndFilter", () => {
     it("should return empty array", () => {
       // Given
       const data = [];
+
+      // When
+      const result = app.findAndFilter(data, "", []);
+
+      // Then
+      expect(result).deep.to.equal([]);
+    });
+
+    it("should return value", () => {
+      // Given
+      const LOOP = ["animals"];
+      const data = [
+        {
+          name: "Lillie Abbott",
+          animals: [
+            { name: "John Dory" },
+            { name: "Gayal" },
+            { name: "Henkel's Leaf-tailed Gecko" },
+          ],
+        },
+      ];
+
       const browseAndFiltedDataFn = sinon.spy(app, "browseAndFiltedData");
 
       // When
-      const result = app.browseAndFiltedData(data);
+      const result = app.findAndFilter(data, "yal", LOOP);
 
       // Then
-      expect(browseAndFiltedDataFn).to.have.been.callCount(1);
+      expect(browseAndFiltedDataFn).to.have.been.called;
+      expect(result[0]).to.contain({ name: "Lillie Abbott" });
+      expect(result[0].animals).deep.to.equal([{ name: "Gayal" }]);
+    });
+  });
+
+  context("filterDataName", () => {
+    it("should return empty array", () => {
+      // Given
+      const data = [];
+
+      // When
+      const result = app.filterDataByName(data, "");
+
+      // Then
       expect(result).deep.to.equal([]);
     });
 
@@ -139,15 +199,36 @@ describe("App", function () {
         },
       ];
 
-      const browseAndFiltedDataFn = sinon.spy(app, "browseAndFiltedData");
-
       // When
-      const result = app.browseAndFiltedData(data, "yal", LOOP);
+      const result = app.filterDataByName(data, "Abb", LOOP);
 
       // Then
-      expect(browseAndFiltedDataFn).to.have.been.callCount(2);
       expect(result[0]).to.contain({ name: "Lillie Abbott" });
-      expect(result[0].animals).deep.to.equal([{ name: "Gayal" }]);
+    });
+  });
+
+  context("browseAndFiltedData", () => {
+    it("should call filterDataByName", () => {
+      // Given
+      const filterDataByNameFn = sinon.spy(app, "filterDataByName");
+
+      // When
+      app.browseAndFiltedData([], "", []);
+
+      // Then
+      expect(filterDataByNameFn).to.have.been.called;
+    });
+
+    it("should call findAndFilter", () => {
+      // Given
+      const LOOP = ["peoples", "animals"];
+      const findAndFilterFn = sinon.spy(app, "findAndFilter");
+
+      // When
+      app.browseAndFiltedData([], "yal", LOOP);
+
+      // Then
+      expect(findAndFilterFn).to.have.been.called;
     });
   });
 });

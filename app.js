@@ -1,56 +1,70 @@
-import arg from 'arg';
-import { data } from './sample/data.js';
-import util from 'util';
+import arg from "arg";
+import { data } from "./sample/data.js";
+import util from "util";
 
-const DEFAULT_LOOP = ['countries', 'people', 'animals'];
+const DEFAULT_LOOP = ["countries", "people", "animals"];
 
 class App {
   parseArgumentsIntoOptions(rawArgs) {
     const args = arg(
       {
-        '--filter': String,
-        '--count': Boolean,
+        "--filter": String,
+        "--count": Boolean,
       },
       {
         argv: rawArgs.slice(2),
-      },
+      }
     );
     return {
-      filter: args['--filter'] || '',
-      count: args['--count'] || false,
+      filter: args["--filter"] || "",
+      count: args["--count"] || false,
     };
   }
 
   browseAndFiltedData(datas = [], filter, loop = DEFAULT_LOOP) {
     loop.shift();
-    const index = loop[0];
-    if (index) {
-      return datas
-        .map((data) => {
-          return data[index].length > 0
-            ? Object.assign({}, data, {
-                [index]: this.browseAndFiltedData(data[index], filter, [...loop]),
-              })
-            : null;
-        })
-        .filter((data) => data[index].length > 0);
+
+    if (loop[0]) {
+      return this.findAndFilter(datas, filter, loop);
     }
+
+    return this.filterDataByName(datas, filter);
+  }
+
+  filterDataByName(datas, filter) {
     return datas.filter((data) => data.name.includes(filter));
   }
 
-  countChild(data) {
-    const childrenKey = Object.keys(data).find((key) => data[key] instanceof Array);
+  findAndFilter(datas, filter, loop) {
+    const index = loop[0];
 
-    return childrenKey
-      ? Object.assign({}, data, {
-          name: `${data.name} [${data[childrenKey].length}]`,
-          [childrenKey]: this.addChildrenLength(data[childrenKey]),
-        })
-      : Object.assign({}, data);
+    return datas
+      .map((data) => {
+        if (data && data[index] && data[index].length > 0) {
+          return Object.assign(data, {
+            [index]: this.browseAndFiltedData(data[index], filter, [...loop]),
+          });
+        }
+        return;
+      })
+      .filter((data) => data && data[index].length > 0);
   }
 
-  addChildrenLength(data) {
-    return data.map((d) => this.countChild(d));
+  countChild = (data) => {
+    const childrenKey = this.getChildrenKey(data);
+
+    if (childrenKey) {
+      return Object.assign(data, {
+        name: `${data.name} [${data[childrenKey].length}]`,
+        [childrenKey]: data[childrenKey].map(this.countChild),
+      });
+    }
+
+    return Object.assign({}, data);
+  };
+
+  getChildrenKey(data) {
+    return Object.keys(data).find((key) => data[key] instanceof Array);
   }
 
   cli(args) {
@@ -58,7 +72,7 @@ class App {
     let filteredData = this.browseAndFiltedData(data, options.filter);
 
     if (options.count) {
-      filteredData = this.addChildrenLength(filteredData);
+      filteredData = filteredData.map(this.countChild);
     }
 
     // util.inspect used to display full object in console
@@ -66,7 +80,6 @@ class App {
   }
 }
 
-const app = new App();
-app.cli(process);
+new App().cli(process);
 
 export default App;
